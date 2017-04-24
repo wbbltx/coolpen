@@ -55,7 +55,7 @@ public class BluUUIDUtils {
         HAVE_KEY_WRITE("0f0f570306"),//当有key是写入命令
         OPEN_STORAGE_CHANNEL("0f0f610101"),//打开存储通道
         OPEN_WRITE_CHANNEL("0f0f610100"),   //打开书写通道 该通道打开以后书写才会收到反馈
-        QUERY_STORAGE_INFO("0f0f710000"),//查询是否有存储信息
+        QUERY_STORAGE_INFO("0f0f710000"),   //查询是否有存储信息
         READ_STORAGE_INFO("0f0f81020000"),//读取存储信息
         EMPTY_STORAGE_DATA("0f0f81030000"),//清空存储数据
         OBTAIN_ELECTRICITY("0f0f571900")//获取电量指令

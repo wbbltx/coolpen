@@ -12,4 +12,5 @@ public abstract class OnBleScanListener extends LeListener {
 
     public abstract void onScanCompleted();
 
+
 }
