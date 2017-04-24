@@ -39,7 +39,7 @@ public class ControllerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_controller);
 
-        BleManager.getDefault().init(this);
+//        BleManager.getDefault().init(this);
 //        BleManager.getDefault().conne
         textView = (TextView) findViewById(R.id.textView);
 
@@ -66,19 +66,19 @@ public class ControllerActivity extends AppCompatActivity {
         public void onConnectionStateChange(final BluetoothGatt gatt, int status, int newState) {
             super.onConnectionStateChange(gatt, status, newState);
             long currentTimeMillis = System.currentTimeMillis();
-            Log.i(TAG, "连接状态变化时调用"+status+"-------"+newState);
+            Log.i(TAG, "连接状态变化时调用" + status + "-------" + newState);
             if (newState == BluetoothProfile.STATE_CONNECTED) {
 //                    intentAction = ACTION_GATT_CONNECTED;
 //                    mConnectionState = STATE_CONNECTED;
 //                    broadcastUpdate(intentAction);
-                Log.i(TAG, "已经连接  接收到已连接回调  并将结果返回去"+currentTimeMillis);
-                BleManager.getDefault().setIsConnected(true);
+                Log.i(TAG, "已经连接  接收到已连接回调  并将结果返回去" + currentTimeMillis);
+//                BleManager.getDefault().setIsConnected(true);
                 mhandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         if (gatt.getDevice().getBondState() != BluetoothDevice.BOND_BONDING) {
                             Log.i(TAG, "连接成功，去发现服务");
-                            BleManager.getDefault().discoverService(address,false,gattCallback);
+//                            BleManager.getDefault().discoverService(address,false,gattCallback);
 //                            gatt.discoverServices();
 //                            BleManager.getDefault().checkServiceDiscover(ControllerActivity.this,address,false,gattCallback);
                         }
@@ -87,12 +87,12 @@ public class ControllerActivity extends AppCompatActivity {
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
 
-                if (status == 133){
+                if (status == 133) {
 //                    未知原因造成连接断开，执行重连
-                    BleManager.getDefault()//设置尝试重新连接
-                            .connect(address, false, gattCallback);
-                }else {
-                    BleManager.getDefault().setIsConnected(false);
+//                    BleManager.getDefault()//设置尝试重新连接
+//                            .connect(address, false, gattCallback);
+                } else {
+//                    BleManager.getDefault().setIsConnected(false);
                     Log.i(TAG, "连接断开,并已经setIsConnected(false)---" + System.currentTimeMillis());
                 }
             }
@@ -103,12 +103,12 @@ public class ControllerActivity extends AppCompatActivity {
             super.onServicesDiscovered(gatt, status);
             Log.i(TAG, "有没有发现服务?");
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                BleManager.getDefault().setIsServiceDiscovered(true);
+//                BleManager.getDefault().setIsServiceDiscovered(true);
 //                BleManager.getDefault().readCharacteristic();
                 Log.i(TAG, "onServicesDiscovered received: 发现服务，接着去使能通知" + status);
-                BleManager.getDefault().enableCharacteristicNotification();
+//                BleManager.getDefault().enableCharacteristicNotification();
             } else {
-                BleManager.getDefault().setIsServiceDiscovered(false);
+//                BleManager.getDefault().setIsServiceDiscovered(false);
                 Log.i(TAG, "onServicesDiscovered received: 未发现服务" + status);
             }
         }
@@ -138,62 +138,62 @@ public class ControllerActivity extends AppCompatActivity {
                     if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_STATE.getMsg())) {
 
                         String local_key = BytesUtils.getBleKey();
-                        String message = BluUUIDUtils.BluInstruct.NOT_KEY_WRITE.getUuid()+ local_key;
+                        String message = BluUUIDUtils.BluInstruct.NOT_KEY_WRITE.getUuid() + local_key;
                         SharedPreUtils.setString(ControllerActivity.this, BluCommonUtils.SAVE_WRITE_PEN_KEY, local_key);
                         final byte[] connKey = BytesUtils.HexString2Bytes(message);
-                        BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
-                        Log.i(TAG, "笔内没有保存key信息，将key写入"+local_key+"-----"+message);
+//                        BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
+                        Log.i(TAG, "笔内没有保存key信息，将key写入" + local_key + "-----" + message);
 
                         mhandler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
 //                                if (!is_Receive_No_Key_Write_Success_State)
-                                BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
+//                                BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
                                 Log.i(TAG, "3s之后再发一次");
                             }
-                        },3000);
+                        }, 3000);
 
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_STATE.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_STATE.getMsg())) {
                         Log.i(TAG, "笔内保存了key信息");
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_SUCCEED_STATE.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_SUCCEED_STATE.getMsg())) {
 
                         is_Receive_No_Key_Write_Success_State = true;
                         String cacheKeyMessage = SharedPreUtils.getString(ControllerActivity.this, BluCommonUtils.SAVE_WRITE_PEN_KEY);
-                        String message = BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid()+cacheKeyMessage;
+                        String message = BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid() + cacheKeyMessage;
                         final byte[] connKey = BytesUtils.HexString2Bytes(message);
                         if (cacheKeyMessage != null && !"".equals(cacheKeyMessage)) {
-                            BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
+//                            BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
                         }
                         Log.i(TAG, "笔内没有保存key信息，写入成功,再写一次");
                         mhandler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
 //                                if (!is_Receive_No_Key_Write_Success_State)
-                                BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
+//                                BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(),connKey);
                                 Log.i(TAG, "笔内没有保存key信息，写入成功,再写一次,3s之后再发一次");
                             }
-                        },3000);
+                        }, 3000);
 
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_FAILURE_STATE.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_FAILURE_STATE.getMsg())) {
                         Log.i(TAG, "笔内没有保存key信息，写入失败");
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_SUCCEED_STATE.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_SUCCEED_STATE.getMsg())) {
                         Log.i(TAG, "笔内保存了key信息，写入成功,最终成功");
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_FAILURE_STATE.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_FAILURE_STATE.getMsg())) {
                         Log.i(TAG, "笔内保存了key信息，写入失败");
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_STORAGE_INFO.getMsg())) {
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_STORAGE_INFO.getMsg())) {
                         //无存储信息，打开书写通道
                     }
                 }
             }
             String msg = BluUUIDUtils.BluInstruct.OPEN_WRITE_CHANNEL.getUuid();
             final byte[] connKey = BytesUtils.HexString2Bytes(msg);
-            BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
+//            BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
             mhandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
+//                    BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
                 }
-            },3000);
+            }, 3000);
             Log.i(TAG, "通道已打开");
         }
 
@@ -223,7 +223,7 @@ public class ControllerActivity extends AppCompatActivity {
 
         String message = BluUUIDUtils.BluInstruct.OBTAIN_KEY_STATE.getUuid();
         byte[] connKey = BytesUtils.HexString2Bytes(message);
-        BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
+//        BleManager.getDefault().writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
     }
 
     private IntentFilter makeFilter() {
@@ -251,22 +251,23 @@ public class ControllerActivity extends AppCompatActivity {
     }
 
     public void close(View view) {
-        BleManager.getDefault().close();
-    }
+//        BleManager.getDefault().close();
+//    }
 
-    public void disconnect(View view) {
-        BleManager.getDefault().disconnect();
-    }
+//    public void disconnect(View view) {
+//        BleManager.getDefault().disconnect();
+//    }
 
-    public void connect(View view) {
-        Log.i(TAG, "重复连接");
-        BleManager.getDefault()//设置尝试重新连接
-                .connect( address, false, gattCallback);
-    }
+//    public void connect(View view) {
+//        Log.i(TAG, "重复连接");
+//        BleManager.getDefault()//设置尝试重新连接
+//                .connect( address, false, gattCallback);
+//    }
 
-    public void noretry(View view) {
-        Log.i(TAG, "不重复连接");
-        BleManager.getDefault()//设置尝试重新连接
-                .connect( address, false, gattCallback);
+//    public void noretry(View view) {
+//        Log.i(TAG, "不重复连接");
+//        BleManager.getDefault()//设置尝试重新连接
+//                .connect( address, false, gattCallback);
+//    }
     }
 }

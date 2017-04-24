@@ -38,12 +38,14 @@ import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
 
 public class BleManager {
 
-    private static final String TAG = ControllerActivity.class.getName();
+    private static final String TAG = BluetoothLe.class.getName();
+    private static final int DEFAULT_COUNT = 3;
+    private static final int DEFAULT_TIMEOUT = 3000;
     private BluetoothGatt gatt;
     private BluetoothGattService service;
     private boolean mRetryConnectEnable = false;
-    private int mRetryConnectCount = 1;
-    private int connectTimeoutMillis = 5000;
+    private int mRetryConnectCount = DEFAULT_COUNT;
+    private int connectTimeoutMillis = DEFAULT_TIMEOUT;
     private int serviceTimeoutMillis;
     //    private int scanPeriod = 10000;
     private boolean isScanning;
@@ -263,12 +265,13 @@ public class BleManager {
 
     private BluetoothDevice getBluetoothDevice(Object remote) {
         BluetoothDevice remoteDevice;
+        Log.i(TAG, "判断remote参数类型");
         if (remote instanceof String) {
-            remoteDevice = defaultAdapter.getRemoteDevice((String) remote);
-            Log.i(TAG, "参数是mac地址" + remoteDevice.getAddress());
+            Log.i(TAG, "参数是mac地址");
+            remoteDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice((String) remote);
         } else if (remote instanceof BluetoothDevice) {
-            Log.i(TAG, "参数是蓝牙设备");
             remoteDevice = (BluetoothDevice) remote;
+            Log.i(TAG, "参数是蓝牙设备");
         } else {
             throw new IllegalArgumentException("参数必须为MAC地址或者蓝牙设备");
         }
@@ -282,7 +285,7 @@ public class BleManager {
      * @param bluetoothGattCallback
      */
     private void checkConnected(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
-        Log.i(TAG, mRetryConnectCount + "---" + mRetryConnectEnable + "---" + connectTimeoutMillis);
+        Log.i(TAG, mRetryConnectEnable + "------"+mRetryConnectCount + "------" + connectTimeoutMillis);
         if (mRetryConnectEnable && mRetryConnectCount > 0 && connectTimeoutMillis > 0) {
             mHandler.postDelayed(new Runnable() {
                 @Override
@@ -299,8 +302,9 @@ public class BleManager {
     }
 
     //使能CharacteristicNotification
-    void enableCharacteristicNotification() {
+    boolean enableCharacteristicNotification() {
         service = gatt.getService(BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid());
+//        service = gatt.getService(BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid());
         if (service == null) {
             Log.i(TAG, "使能通知---service为空");
             throw new NullPointerException("servicr 不能为空");
@@ -308,7 +312,6 @@ public class BleManager {
         Log.i(TAG, "通知被使能---service不为空");
         BluetoothGattCharacteristic characteristic = service.getCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_READ.getUuid());
         gatt.setCharacteristicNotification(characteristic, true);
-
 //        List<BluetoothGattDescriptor> descriptors = characteristic.getDescriptors();
 //        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID);
 //        getDescriptor的参数没有特定要求，也可以直接得到descriptor数组 关键是setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
@@ -317,11 +320,13 @@ public class BleManager {
         if (descriptor != null) {
             Log.i(TAG, "writeDescriptor(notification), " + CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID);
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            gatt.writeDescriptor(descriptor);
+            boolean b = gatt.writeDescriptor(descriptor);
+            return b;
         }
+        return false;
     }
 
-    //写入信息
+    //向特定特征 写入信息
     void writeCharacteristic(UUID characteristicUUID, byte[] bytes) {
         if (service != null && gatt != null) {
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUUID);
@@ -329,19 +334,6 @@ public class BleManager {
 //            Log.i(TAG, "正在写characteristic" + characteristic.getUuid());
             gatt.writeCharacteristic(characteristic);
         }
-    }
-
-    public void writeCharacteristic(byte[] bytes) {
-        if (service != null && gatt != null) {
-            BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUUID);
-            characteristic.setValue(bytes);
-            Log.i(TAG, "正在写characteristic" + characteristic.getUuid());
-            gatt.writeCharacteristic(characteristic);
-        }
-    }
-
-    public void setCharacteristicUUID(UUID characteristicUUID) {
-        this.characteristicUUID = characteristicUUID;
     }
 
     private static final UUID SERVICE = UUID.fromString("00001800-0000-1000-8000-00805f9b34fb");
@@ -388,6 +380,13 @@ public class BleManager {
     void setConnectTimeOut(int millisecond) {
         this.connectTimeoutMillis = millisecond;
         Log.i(TAG, "设置连接超时" + millisecond);
+    }
+
+//    复位重连设置
+    void resetRetryConfig(){
+        mRetryConnectEnable = false;
+        mRetryConnectCount = DEFAULT_COUNT;
+        this.connectTimeoutMillis = DEFAULT_TIMEOUT;
     }
 
     //    发现服务超时

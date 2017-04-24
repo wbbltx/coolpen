@@ -48,7 +48,7 @@ public class TestActivity extends AppCompatActivity {
 //                BluetoothDevice device = (BluetoothDevice) mLeDeviceListAdapter.getItem(i);  //这两行的效果是一样的
                 String address = device.getAddress();
                 String name = device.getName();
-                Intent intent = new Intent(TestActivity.this,ControllerActivity.class);
+                Intent intent = new Intent(TestActivity.this,Test2Activity.class);
                 intent.putExtra("address",address);
                 intent.putExtra("name",name);
                 startActivity(intent);

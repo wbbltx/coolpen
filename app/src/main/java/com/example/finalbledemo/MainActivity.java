@@ -28,7 +28,6 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    UUID[] uuids = {BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid()};
     private ListView listview;
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private static final String TAG = MainActivity.class.getName();
@@ -65,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
-                BleManager.getDefault().stopScanLeDevice(mLeScanCallback);
+//                BleManager.getDefault().stopScanLeDevice(mLeScanCallback);
 
                 BluetoothDevice device = mLeDeviceListAdapter.getDevice(i);
 //                BluetoothDevice device = (BluetoothDevice) mLeDeviceListAdapter.getItem(i);  //这两行的效果是一样的
@@ -81,10 +80,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void startScan(View view) {
         mLeDeviceListAdapter.clear();
-        BleManager.getDefault()
+//        BleManager.getDefault()
 //                .setScanPeriod(20000)
 //                .setScanWithServiceUUID(null)
-                .scanLeDevice(null,2000,mLeScanCallback);
+//                .scanLeDevice(null,2000,mLeScanCallback);
 //        scanLeDevice(true);
         Log.i(TAG,"开始扫描");
 //        BleManager.getDefault().scanLeDevice(uuids, mLeScanCallback);
