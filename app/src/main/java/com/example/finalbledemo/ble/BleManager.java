@@ -23,11 +23,11 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.example.finalbledemo.BluUUIDUtils;
-import com.example.finalbledemo.ControllerActivity;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
@@ -38,49 +38,31 @@ import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
 
 public class BleManager {
 
+    private Context context;
+
     private static final String TAG = BluetoothLe.class.getName();
     private static final int DEFAULT_COUNT = 3;
     private static final int DEFAULT_TIMEOUT = 3000;
-    private BluetoothGatt gatt;
-    private BluetoothGattService service;
+
+    private boolean isScanning;
     private boolean mRetryConnectEnable = false;
+    private boolean isConnected = false;
+    private boolean isServiceDiscovered;
+
     private int mRetryConnectCount = DEFAULT_COUNT;
     private int connectTimeoutMillis = DEFAULT_TIMEOUT;
     private int serviceTimeoutMillis;
-    //    private int scanPeriod = 10000;
-    private boolean isScanning;
-    //    private UUID[] serviceUUID = {BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid()};
-    private BluetoothAdapter defaultAdapter;
-    private Context context;
-    private boolean isConnected = false;
-    private boolean isServiceDiscovered;
+
+    private BluetoothGatt gatt;
+    private BluetoothGattService service;
     private Handler mHandler = new Handler(Looper.getMainLooper());
-    private UUID characteristicUUID = BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid();
+    private Timer mTimer;
+    private TimerTask mTimerTask;
 
-    //    不需要了
-//    private static class SingletonHolder {
-//        private static final BleManager INSTANCE = new BleManager();
-//    }
-
-    //    不需要了
-//    public BleManager() {
-//    }
-
-    BleManager(Context context,Handler handler) {
+    BleManager(Context context, Handler handler) {
         this.context = context;
         this.mHandler = handler;
     }
-
-    //    不需要了
-//    public static BleManager getDefault() {
-//        return SingletonHolder.INSTANCE;
-//    }
-
-    //    不需要了
-//    public void init(Activity context) {
-//        this.context = context;
-//        defaultAdapter = BluetoothAdapter.getDefaultAdapter();
-//    }
 
     //判断是否支持ble
     public boolean isBleSupported() {
@@ -92,13 +74,28 @@ public class BleManager {
     }
 
     //判断蓝牙是否开启
-    public boolean isBluetoothOpen() {
+    boolean isBluetoothOpen() {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        return bluetoothAdapter.isEnabled();
+        if (bluetoothAdapter.isEnabled()) {
+            Log.e(TAG, "your bluetooth has already been turned on. ");
+//            Toast.makeText(context, "蓝牙已经开启", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        return false;
+    }
+
+    //是否支持蓝牙
+    boolean isBluetoothSupported() {
+        if (null == BluetoothAdapter.getDefaultAdapter()) {
+//            Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "your device does not support bluetooth. ");
+            return false;
+        }
+        return true;
     }
 
     //intent开启蓝牙
-    private boolean enableIntentBluetooth(Activity activity) {
+    boolean enableIntentBluetooth(Activity activity) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
@@ -121,26 +118,15 @@ public class BleManager {
     // 直接开启蓝牙，不经过提示
     boolean enableBluetooth() {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        if (bluetoothAdapter == null) {
-            Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "false. your device does not support bluetooth. ");
-            return false;
-        }
-
-        isBleSupported();
-
-        if (bluetoothAdapter.isEnabled()) {
-            Toast.makeText(context, "蓝牙已经开启", Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "your device has been turn on bluetooth.");
-            return false;
-        }
         boolean enable = bluetoothAdapter.enable();
-        if (enable)
-            Toast.makeText(context, "蓝牙开启", Toast.LENGTH_SHORT).show();
-        Toast.makeText(context, "蓝牙未开启", Toast.LENGTH_SHORT).show();
-
-        return enable;
+        if (enable) {
+//            Toast.makeText(context, "蓝牙开启", Toast.LENGTH_SHORT).show();
+            Log.i(TAG, "bluetooth is on. ");
+            return enable;
+        }
+//        Toast.makeText(context, "蓝牙未开启", Toast.LENGTH_SHORT).show();
+        Log.i(TAG, "bluetooth is off. ");
+        return false;
     }
 
     //    关闭蓝牙
@@ -149,11 +135,12 @@ public class BleManager {
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (bluetoothAdapter.isEnabled()) {
                 bluetoothAdapter.disable();
-                Toast.makeText(context, "蓝牙关闭", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(context, "蓝牙关闭", Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "bluetooth is off. ");
                 return true;
             } else {
-                Toast.makeText(context, "蓝牙已经关闭", Toast.LENGTH_SHORT).show();
-                Log.d(TAG, "false. your device has been turn off Bluetooth.");
+//                Toast.makeText(context, "蓝牙已经关闭", Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "bluetooth has already been turned off. ");
                 return false;
             }
         }
@@ -164,6 +151,7 @@ public class BleManager {
     public void scanLeDevice(UUID[] serviceUUID, int scanPeriod, final BluetoothAdapter.LeScanCallback mLeScanCallback) {
         stopScanLeDevice(mLeScanCallback);
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+//        BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
         if (null == serviceUUID || 0 == serviceUUID.length) {
             bluetoothAdapter.startLeScan(mLeScanCallback);
         } else {
@@ -194,38 +182,6 @@ public class BleManager {
         }
     }
 
-//       设置扫描时长
-//    public BleManager setScanPeriod(int millisecond) {
-//        this.scanPeriod = millisecond;
-//        return this;
-//    }
-
-//     根据服务UUID进行过滤扫描
-//    public BleManager setScanWithServiceUUID(UUID[] serviceUUID) {
-//        this.serviceUUID = serviceUUID;
-//        return this;
-//    }
-
-    //连接
-    @Deprecated
-    private void connect1(Context context, String address, boolean autoConnect, BluetoothGattCallback bluetoothGattCallback) {
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        Log.i(TAG, "通过---" + address + "---获取设备");
-        BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(address);
-        Log.i(TAG, "开始连接+++" + remoteDevice.getAddress());
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Log.i(TAG, "获取gatt实例 4个参数");
-            gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback, TRANSPORT_LE);
-        } else {
-            Log.i(TAG, "获取gatt实例 3个参数");
-            gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback);
-        }
-//        gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback);
-        checkConnected(address, autoConnect, bluetoothGattCallback);
-        Log.i(TAG, "正在连接");
-    }
-
     void setIsConnected(boolean isConnected) {
         Log.i(TAG, "接收返回的连接消息-----" + isConnected);
         this.isConnected = isConnected;
@@ -239,7 +195,7 @@ public class BleManager {
      * @param autoConnect           是否自动连接
      * @param bluetoothGattCallback 回调 如果连接成功，一定要在回调的方法中setIsConnected（true）同理 如果连接断开，则要在回调中设置setIsConnected（false）
      */
-    public void connect(Object remote, boolean autoConnect, BluetoothGattCallback bluetoothGattCallback) {
+    void connect(Object remote, boolean autoConnect, BluetoothGattCallback bluetoothGattCallback) {
         //     防止重复调用连接方法
         if (isConnected) {
             Log.i(TAG, "已经连接 直接返回");
@@ -285,7 +241,7 @@ public class BleManager {
      * @param bluetoothGattCallback
      */
     private void checkConnected(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
-        Log.i(TAG, mRetryConnectEnable + "------"+mRetryConnectCount + "------" + connectTimeoutMillis);
+        Log.i(TAG, mRetryConnectEnable + "------" + mRetryConnectCount + "------" + connectTimeoutMillis);
         if (mRetryConnectEnable && mRetryConnectCount > 0 && connectTimeoutMillis > 0) {
             mHandler.postDelayed(new Runnable() {
                 @Override
@@ -382,8 +338,8 @@ public class BleManager {
         Log.i(TAG, "设置连接超时" + millisecond);
     }
 
-//    复位重连设置
-    void resetRetryConfig(){
+    //    复位重连设置
+    void resetRetryConfig() {
         mRetryConnectEnable = false;
         mRetryConnectCount = DEFAULT_COUNT;
         this.connectTimeoutMillis = DEFAULT_TIMEOUT;
@@ -431,6 +387,7 @@ public class BleManager {
 
     public void close() {
         if (gatt != null) {
+            cancelReadRssiTimerTask();
             Log.i(TAG, "gatt不为空，执行关闭置空gatt");
             isConnected = false;
             isServiceDiscovered = false;
@@ -441,7 +398,8 @@ public class BleManager {
     }
 
     public void disconnect() {
-        if (gatt != null) {
+        if (isConnected && gatt != null) {
+            cancelReadRssiTimerTask();
             isConnected = false;
             isServiceDiscovered = false;
             gatt.disconnect();
@@ -467,6 +425,42 @@ public class BleManager {
                 Log.e(TAG, "An exception occured while refreshing device", exception);
             }
             return false;
+        }
+    }
+
+    private void readRssiTimerTask(int readRssiIntervalMillisecond) {
+        mTimer = null;
+        mTimerTask = null;
+        mTimer = new Timer();
+        mTimerTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (gatt != null) {
+                    Log.i(TAG, "读取信号");
+                    gatt.readRemoteRssi();
+                }
+            }
+        };
+        mTimer.schedule(mTimerTask, 100, readRssiIntervalMillisecond);
+    }
+
+    void cancelReadRssiTimerTask() {
+        if (mTimer != null) {
+            mTimer.cancel();
+            mTimer = null;
+        }
+        if (mTimerTask != null) {
+            mTimerTask.cancel();
+            mTimerTask = null;
+        }
+    }
+
+    void readRssi(int millisecond) {
+        if (isConnected) {
+            Log.i(TAG, "连接 执行读取信号");
+            readRssiTimerTask(millisecond);
+        } else {
+            Log.i(TAG, "please make sure the bluetooth device is connected");
         }
     }
 

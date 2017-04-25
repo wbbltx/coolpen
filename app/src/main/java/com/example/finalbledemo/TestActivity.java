@@ -58,7 +58,8 @@ public class TestActivity extends AppCompatActivity {
     }
 
     public void enableBle(View view) {
-        BluetoothLe.getDefault().openBle();
+        boolean b = BluetoothLe.getDefault().openBle();
+        Log.i("controll", "" + b);
     }
 
     public void closeBle(View view) {

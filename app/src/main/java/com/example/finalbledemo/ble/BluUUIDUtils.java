@@ -1,4 +1,4 @@
-package com.example.finalbledemo;
+package com.example.finalbledemo.ble;
 
 import android.os.ParcelUuid;
 
@@ -10,8 +10,8 @@ import java.util.UUID;
  * 蓝牙UUID和蓝牙指令
  */
 
-public class BluUUIDUtils {
-    public enum BtSmartUuid {
+class BluUUIDUtils {
+    enum BtSmartUuid {
         UUID_SERVICE("0000fee9-0000-1000-8000-00805f9b34fb"),//service  UUID
         UUID_CHAR_READ("d44bc439-abfd-45a2-b575-925416129601"),//通知读取  UUID
         UUID_CHAR_WRITE("d44bc439-abfd-45a2-b575-925416129600");//蓝牙书写 UUID
@@ -49,7 +49,7 @@ public class BluUUIDUtils {
         }
     }
 
-    public enum BluInstruct {
+    enum BluInstruct {
         OBTAIN_KEY_STATE("0f0f570000"),//获取key状态命令
         NOT_KEY_WRITE("0f0f570206"),//无key时写入key
         HAVE_KEY_WRITE("0f0f570306"),//当有key是写入命令
@@ -71,7 +71,7 @@ public class BluUUIDUtils {
         }
     }
 
-    public enum BluInstructReplyMsg {
+    enum BluInstructReplyMsg {
         HAVE_KEY_STATE("0f0f57800101"),//有key状态返回
         NOT_KEY_STATE("0f0f57800100"),//无key状态返回
         NOT_KEY_WRITE_SUCCEED_STATE("0f0f57820100"),//无key时，写入key状态成功

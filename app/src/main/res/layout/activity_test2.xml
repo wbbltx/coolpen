@@ -44,4 +44,24 @@
         android:text="获取电量信息"
         app:layout_constraintTop_toBottomOf="@+id/button10"
         tools:layout_editor_absoluteX="147dp" />
+
+    <Button
+        android:id="@+id/button12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:onClick="antilost"
+        android:text="防丢"
+        app:layout_constraintTop_toBottomOf="@+id/button11"
+        tools:layout_editor_absoluteX="148dp" />
+
+    <Button
+        android:id="@+id/button13"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:onClick="closeantilost"
+        android:text="关闭防丢"
+        app:layout_constraintTop_toBottomOf="@+id/button12"
+        tools:layout_editor_absoluteX="147dp" />
 </android.support.constraint.ConstraintLayout>

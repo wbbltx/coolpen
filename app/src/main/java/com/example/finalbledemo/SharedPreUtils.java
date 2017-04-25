@@ -61,7 +61,7 @@ public class SharedPreUtils {
 				SHARED_PREFERANCE_NAME, Context.MODE_PRIVATE);
 		return sp.getLong(key, -1);
 	}
-	public static Long getLong(Context context, String key,int defaultValue) {
+	public static Long getLong(Context context, String key, int defaultValue) {
 		SharedPreferences sp = context.getSharedPreferences(
 				SHARED_PREFERANCE_NAME, Context.MODE_PRIVATE);
 		return sp.getLong(key,defaultValue);
@@ -78,7 +78,7 @@ public class SharedPreUtils {
 	}
 
 	public static boolean getBoolean(Context context, String key,
-									 boolean defaultValue) {
+                                     boolean defaultValue) {
 		SharedPreferences sp = context.getSharedPreferences(
 				SHARED_PREFERANCE_NAME, Context.MODE_PRIVATE);
 		return sp.getBoolean(key, defaultValue);
