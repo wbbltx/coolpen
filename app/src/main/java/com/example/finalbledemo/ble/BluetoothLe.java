@@ -43,6 +43,7 @@ public class BluetoothLe {
 
     private OnReadRssiListener onReadRssiListener;
     private OnLeNotificationListener onLeNotificationListener;
+    private OnConnectListener onConnectListener;
     private OnKeyListener onKeyGeneratedListener;
 
     /**
@@ -305,6 +306,9 @@ public class BluetoothLe {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i(TAG, "已经连接  接收到已连接回调  并将结果返回去");
                 bleManager.setIsConnected(true);
+                if (onConnectListener != null){
+                    onConnectListener.onSuccess();
+                }
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -325,6 +329,9 @@ public class BluetoothLe {
                     bleManager.connect(address, false, gattCallback);
                     Log.i(TAG, "133 19导致连接断开,重连");
                 } else {
+                    if (onConnectListener !=null){
+                        onConnectListener.onFailed();
+                    }
                     Log.i(TAG, "连接断开");
                 }
             }
@@ -550,6 +557,10 @@ public class BluetoothLe {
         for (byte byteChar : data)
             stringBuilder.append(String.format("%02x", byteChar));
         return stringBuilder.toString();
+    }
+
+    public void setOnConnectListener(OnConnectListener onConnectListener){
+        this.onConnectListener = onConnectListener;
     }
 
     public void setOnLeNotificationListener(OnLeNotificationListener onLeNotificationListener) {
