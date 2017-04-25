@@ -70,10 +70,10 @@ public class MainActivity extends AppCompatActivity {
 //                BluetoothDevice device = (BluetoothDevice) mLeDeviceListAdapter.getItem(i);  //这两行的效果是一样的
                 String address = device.getAddress();
                 String name = device.getName();
-                Intent intent = new Intent(MainActivity.this,ControllerActivity.class);
-                intent.putExtra("address",address);
-                intent.putExtra("name",name);
-                startActivity(intent);
+//                Intent intent = new Intent(MainActivity.this,ControllerActivity.class);
+//                intent.putExtra("address",address);
+//                intent.putExtra("name",name);
+//                startActivity(intent);
             }
         });
     }

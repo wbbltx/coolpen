@@ -1,4 +1,4 @@
-package com.example.finalbledemo.ble;
+package com.example.finalbledemo;
 
 
 /**

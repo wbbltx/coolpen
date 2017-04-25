@@ -2,7 +2,6 @@ package com.example.finalbledemo.ble;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -18,12 +17,9 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.example.finalbledemo.BluCommonUtils;
-import com.example.finalbledemo.BluUUIDUtils;
 import com.example.finalbledemo.BytesUtils;
-import com.example.finalbledemo.ControllerActivity;
-import com.example.finalbledemo.SharedPreUtils;
-import com.example.finalbledemo.TestActivity;
+import com.example.finalbledemo.SystemTransformUtils;
+import com.example.finalbledemo.Utils;
 
 import java.util.UUID;
 
@@ -44,8 +40,33 @@ public class BluetoothLe {
     private boolean is_Receive_Key_State;
 
     private Context applicationContext;
+
+    private OnReadRssiListener onReadRssiListener;
     private OnLeNotificationListener onLeNotificationListener;
-//    private UUID characteristicUUID = BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid();
+    private OnKeyListener onKeyGeneratedListener;
+
+    /**
+     * 打开存储通道
+     */
+    public static final int OPEN_STORAGE_CHANNEL = 0;
+    /**
+     * 打开书写通道
+     */
+    public static final int OPEN_WRITE_CHANNEL = 1;
+    /**
+     * 打开存储通道
+     */
+    public static final int READ_STORAGE_INFO = 2;
+    /**
+     * 清空存储信息
+     */
+    public static final int EMPTY_STORAGE_DATA = 3;
+    /**
+     * 获取电量
+     */
+    public static final int OBTAIN_ELECTRICITY = 4;
+    private String cacheKeyMessage;
+
 
     private static class SingletonHolder {
         private static final BluetoothLe INSTANCE = new BluetoothLe();
@@ -78,8 +99,12 @@ public class BluetoothLe {
     /**
      * 开启蓝牙 内部检测是否支持BLE
      */
-    public void openBle() {
-        bleManager.enableBluetooth();
+    public boolean openBle() {
+        boolean isOpen = false;
+        if (bleManager.isBluetoothSupported() && bleManager.isBleSupported() && !bleManager.isBluetoothOpen()) {
+            isOpen = bleManager.enableBluetooth();
+        }
+        return isOpen;
     }
 
     /**
@@ -87,6 +112,13 @@ public class BluetoothLe {
      */
     public void closeBle() {
         bleManager.disableBluetooth();
+    }
+
+    /**
+     * @return true if bluetooth is open
+     */
+    public boolean isBluetoothOpen() {
+        return bleManager.isBluetoothOpen();
     }
 
     /**
@@ -127,10 +159,12 @@ public class BluetoothLe {
     public void startScan(Activity activity, OnBleScanListener onBleScanListener) {
 
         this.onBleScanListener = onBleScanListener;
-
         requestPermission(activity);
-
-        bleManager.scanLeDevice(serviceUUID, scanPeriod, mLeScanCallback);
+        if (isBluetoothOpen()) {
+            bleManager.scanLeDevice(serviceUUID, scanPeriod, mLeScanCallback);
+        } else {
+            Toast.makeText(activity, "请开启蓝牙", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void requestPermission(Activity context) {
@@ -157,6 +191,11 @@ public class BluetoothLe {
         }
     }
 
+//    public BluetoothLe setReadRssiInterval(int millisecond) {
+//        bleManager.setReadRssiIntervalMillisecond(millisecond);
+//        return this;
+//    }
+
     /**
      * 连接远程设备
      *
@@ -169,12 +208,20 @@ public class BluetoothLe {
     }
 
     public void disconnectBleDevice() {
-        is_Receive_Key_State = false;
+        closeResource();
         bleManager.disconnect();
     }
 
-    public void close() {
+    private void closeResource() {
         is_Receive_Key_State = false;
+        is_Receive_No_Key_Write_Success_State = false;
+        is_Receive_Have_Key_Write_Success_State = false;
+        onReadRssiListener = null;
+        onLeNotificationListener = null;
+    }
+
+    public void close() {
+        closeResource();
         bleManager.close();
     }
 
@@ -196,7 +243,7 @@ public class BluetoothLe {
         return this;
     }
 
-    //    重连设置之后参数有所改变，再次连接以后有可能导致133错误，需要复位
+    //    允许重连功能开启之后 重连参数有所改变，再次连接以后有可能导致133错误，需要复位
     public void resetRetryConfig() {
         bleManager.resetRetryConfig();
     }
@@ -207,18 +254,46 @@ public class BluetoothLe {
     }
 
     //    发送命令
-    public void sendBleInstruct(String instructInfo, boolean isKey) {
+    private void sendBleInstruct(String instructInfo, boolean isKey) {
         String message = "";
         if (isKey) {
             String local_key = BytesUtils.getBleKey();
             Log.i(TAG, "保存key到本地--------" + local_key);
-            SharedPreUtils.setString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY, local_key);
+//            SharedPreUtils.setString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY, local_key);
+            if (onKeyGeneratedListener != null) {
+                onKeyGeneratedListener.onSuccess(local_key);
+            }
             message = instructInfo + local_key;
         } else {
             message = instructInfo;
         }
         byte[] connKey = BytesUtils.HexString2Bytes(message);
         writeCharacteristic(connKey);
+    }
+
+    public void sendBleInstruct(int flag) {
+        switch (flag) {
+//            打开书写通道
+            case OPEN_WRITE_CHANNEL:
+                sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_WRITE_CHANNEL.getUuid(), false);
+                break;
+//            打开存储通道
+            case OPEN_STORAGE_CHANNEL:
+                sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_STORAGE_CHANNEL.getUuid(), false);
+                break;
+//            读取通道信息
+            case READ_STORAGE_INFO:
+                sendBleInstruct(BluUUIDUtils.BluInstruct.READ_STORAGE_INFO.getUuid(), false);
+                break;
+//            清空通道信息
+            case EMPTY_STORAGE_DATA:
+                sendBleInstruct(BluUUIDUtils.BluInstruct.EMPTY_STORAGE_DATA.getUuid(), false);
+                break;
+//            获取电量信息
+            case OBTAIN_ELECTRICITY:
+                sendBleInstruct(BluUUIDUtils.BluInstruct.OBTAIN_ELECTRICITY.getUuid(), false);
+                break;
+        }
     }
 
     private BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
@@ -243,12 +318,12 @@ public class BluetoothLe {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
 
                 bleManager.setIsConnected(false);
-                if (status == 133) {
-//                    未知原因造成连接断开，执行重连
+                if (status == 133 ||  status ==19) {
+//                    未知原因 或超时造成连接断开，执行重连
                     bleManager.resetRetryConfig();
                     String address = gatt.getDevice().getAddress();
                     bleManager.connect(address, false, gattCallback);
-                    Log.i(TAG, "133导致连接断开,重连");
+                    Log.i(TAG, "133 19导致连接断开,重连");
                 } else {
                     Log.i(TAG, "连接断开");
                 }
@@ -271,9 +346,9 @@ public class BluetoothLe {
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        Log.i(TAG, "进来handler---" + is_Receive_Key_State);
+
                         if (!is_Receive_Key_State) {
-                            Log.i(TAG, "onServicesDiscovered received:没有收到响应 10000后 再次发送命令获取key状态");
+                            Log.i(TAG, "onServicesDiscovered received:没有收到响应 600后 再次发送命令获取key状态");
                             sendBleInstruct(BluUUIDUtils.BluInstruct.OBTAIN_KEY_STATE.getUuid(), false);
                         }
                     }
@@ -321,11 +396,14 @@ public class BluetoothLe {
                                     Log.i(TAG, "NOT_KEY_STATE 1s之后再将key写入一次");
                                 }
                             }
-                        }, 1000);
+                        }, 600);
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_STATE.getMsg())) {
                         is_Receive_Key_State = true;
                         Log.i(TAG, "笔内已经保存了key信息");
-                        final String cacheKeyMessage = SharedPreUtils.getString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY);
+//                        final String cacheKeyMessage = SharedPreUtils.getString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY);
+                        if (onKeyGeneratedListener != null) {
+                            onKeyGeneratedListener.onGetKeyEmpty();
+                        }
                         if (!cacheKeyMessage.isEmpty()) {
                             Log.i(TAG, "笔内已经保存了key信息，不为空，发送 进行比较---" + cacheKeyMessage);
                             mHandler.postDelayed(new Runnable() {
@@ -335,22 +413,25 @@ public class BluetoothLe {
                                 }
                             }, 600);
                         } else {
-                            Toast.makeText(applicationContext, "请将蓝牙笔设置为配对状态，再尝试连接", Toast.LENGTH_LONG).show();
+                            throw new NullPointerException("cacheKeyMessage 为空");
+//                            Toast.makeText(applicationContext, "请将蓝牙笔设置为配对状态，再尝试连接", Toast.LENGTH_LONG).show();
                         }
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_SUCCEED_STATE.getMsg())) {
 
                         is_Receive_No_Key_Write_Success_State = true;
-                        String cacheKeyMessage = SharedPreUtils.getString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY);
-                        String message = BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid() + cacheKeyMessage;
-                        final byte[] connKey = BytesUtils.HexString2Bytes(message);
+//                        String cacheKeyMessage = SharedPreUtils.getString(applicationContext, BluCommonUtils.SAVE_WRITE_PEN_KEY);
+                        if (onKeyGeneratedListener != null) {
+                            onKeyGeneratedListener.onGetKeyEmpty();
+                        }
+
                         if (cacheKeyMessage != null && !"".equals(cacheKeyMessage)) {
-                            bleManager.writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
+                            sendBleInstruct(BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid() + cacheKeyMessage, false);
                             Log.i(TAG, "笔内没有保存key信息，写入成功, 之后再写一次");
                             mHandler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
                                     if (!is_Receive_Have_Key_Write_Success_State) {
-                                        bleManager.writeCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_WRITE.getUuid(), connKey);
+                                        sendBleInstruct(BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid() + cacheKeyMessage, false);
                                         Log.i(TAG, "无key成功,2s之后再发一次");
                                     }
                                 }
@@ -360,6 +441,7 @@ public class BluetoothLe {
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_KEY_WRITE_FAILURE_STATE.getMsg())) {
 //                        执行断开连接
                         is_Receive_No_Key_Write_Success_State = true;
+                        disconnectBleDevice();
                         Log.i(TAG, "笔内没有保存key信息，写入失败");
 
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_SUCCEED_STATE.getMsg())) {
@@ -376,6 +458,7 @@ public class BluetoothLe {
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_FAILURE_STATE.getMsg())) {
                         //执行断开连接
                         is_Receive_Have_Key_Write_Success_State = true;
+                        disconnectBleDevice();
                         Log.i(TAG, "笔内保存了key信息，写入失败");
 
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.NOT_STORAGE_INFO.getMsg())) {
@@ -392,37 +475,31 @@ public class BluetoothLe {
 
                         Log.i(TAG, "有存储信息");
 
-                        if (onLeNotificationListener != null){
+                        if (onLeNotificationListener != null) {
                             onLeNotificationListener.onHistroyInfoDetected();
                         }
 
-//                        mHandler.postDelayed(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_WRITE_CHANNEL.getUuid(), false);
-//                            }
-//                        }, 500);
-                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.STORAGE_DATA_READ_END.getMsg())){
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.STORAGE_DATA_READ_END.getMsg())) {
                         Log.i(TAG, "存储信息读取完毕");
-                        if (onLeNotificationListener != null){
+                        if (onLeNotificationListener != null) {
                             onLeNotificationListener.onHistroyInfoReadCompleted(bluMessage);
                         }
-                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.STORAGE_DATA_EMPTY_END.getMsg())){
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.STORAGE_DATA_EMPTY_END.getMsg())) {
                         Log.i(TAG, "存储信息清空完毕");
-                        if (onLeNotificationListener != null){
+                        if (onLeNotificationListener != null) {
                             onLeNotificationListener.onHistroyInfoDeleted();
                         }
-                    }else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.ELECTRICITY_INFO.getMsg())){
+                    } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.ELECTRICITY_INFO.getMsg())) {
                         Log.i(TAG, "电量信息");
                         String electrice = bluMessage.substring(bluMessage.length() - 2, bluMessage.length());
                         final int parseInt = SystemTransformUtils.getInstance().hexToInt(electrice);
-                        if (onLeNotificationListener != null){
+                        if (onLeNotificationListener != null) {
                             onLeNotificationListener.onElectricityDetected(parseInt);
                         }
                     }
                 } else {
 //                    不是0f0f开头的 是笔迹信息
-                    if (onLeNotificationListener != null){
+                    if (onLeNotificationListener != null) {
                         onLeNotificationListener.onWrite(bluMessage);
                     }
                 }
@@ -440,10 +517,31 @@ public class BluetoothLe {
         }
 
         @Override
-        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+        public void onReadRemoteRssi(BluetoothGatt gatt, final int rssi, int status) {
             super.onReadRemoteRssi(gatt, rssi, status);
+            Log.i(TAG, "是否被触发？"+status);
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+//                mHandler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                if (rssi < -110) {
+                    onReadRssiListener.onSuccess(rssi, Utils.getDistance(rssi));
+//                }
+//                    }
+//                });
+            }
         }
     };
+
+    public void enableAntiLost(int millisecond, OnReadRssiListener onReadRssiListener) {
+        Log.i(TAG, "设置了时间 和 监听");
+        this.onReadRssiListener = onReadRssiListener;
+        bleManager.readRssi(millisecond);
+    }
+
+    public void disableAntiLost() {
+        bleManager.cancelReadRssiTimerTask();
+    }
 
     public String bytesToHexString(byte[] data) {
         if (data == null)
@@ -454,8 +552,18 @@ public class BluetoothLe {
         return stringBuilder.toString();
     }
 
-    public void setOnLeNotificationListener(OnLeNotificationListener onLeNotificationListener){
+    public void setOnLeNotificationListener(OnLeNotificationListener onLeNotificationListener) {
         this.onLeNotificationListener = onLeNotificationListener;
+    }
+
+    public void setOnKeyListener(OnKeyListener onKeyGeneratedListener) {
+        Log.i(TAG, "key生成的监听");
+        this.onKeyGeneratedListener = onKeyGeneratedListener;
+    }
+
+    public void setKey(String key) {
+        Log.i(TAG, "将sp中的key设置进来");
+        this.cacheKeyMessage = key;
     }
 
 }
