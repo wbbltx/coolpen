@@ -41,7 +41,6 @@ public class TestActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
-
                 BluetoothLe.getDefault().stopScan();
 
                 BluetoothDevice device = (BluetoothDevice) bleListAdapter.getItem(i);
@@ -67,12 +66,15 @@ public class TestActivity extends AppCompatActivity {
     }
 
     public void scan(View view) {
+        Log.i("controll", "点击扫描");
         bleListAdapter.clear();
         BluetoothLe.getDefault()
                 .setScanPeriod(SEET_MILLI_SECOND_TIME)//设置扫描时长，单位毫秒，默认10秒
+                .setScanByServiceUUID(null)
                 .startScan(this, new OnBleScanListener() {
                     @Override
                     public void onScanResult(BluetoothDevice bluetoothDevice, int rssi, byte[] scanRecord) {
+                        Log.i("controll", bluetoothDevice.getAddress());
                         bleListAdapter.addDevice(bluetoothDevice);
                         bleListAdapter.notifyDataSetChanged();
                     }
@@ -122,5 +124,12 @@ public class TestActivity extends AppCompatActivity {
                 Log.i("controll", "权限全部授权");
             }
         }
+    }
+
+    public void connect(View view) {
+        Intent intent = new Intent(TestActivity.this,Test2Activity.class);
+        intent.putExtra("address","07:01:03:D1:00:C4");
+        intent.putExtra("name","07:01:03:D1:00:C4");
+        startActivity(intent);
     }
 }

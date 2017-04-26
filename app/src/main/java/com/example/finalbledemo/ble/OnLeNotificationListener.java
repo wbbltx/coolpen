@@ -14,7 +14,7 @@ public abstract class OnLeNotificationListener extends LeListener {
     public abstract void onWrite(String info);
 
     /**
-     * 历史信息
+     * 历史笔迹信息
      * @param info
      */
     public abstract void onHistroyInfoReadCompleted(String info);
@@ -29,10 +29,6 @@ public abstract class OnLeNotificationListener extends LeListener {
      */
     public abstract void onHistroyInfoDeleted();
 
-    /**
-     * 电量信息
-     * @param electricity
-     */
-    public abstract void onElectricityDetected(int electricity);
+
 
 }

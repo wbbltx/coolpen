@@ -1,4 +1,4 @@
-package com.example.finalbledemo;
+package com.example.finalbledemo.ble;
 
 import android.annotation.SuppressLint;
 

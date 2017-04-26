@@ -6,5 +6,5 @@ package com.example.finalbledemo.ble;
  */
 
 public abstract class OnReadRssiListener extends LeListener {
-    public abstract void onSuccess(int rssi, int cm);
+    public abstract void onSuccess(int rssi);
 }

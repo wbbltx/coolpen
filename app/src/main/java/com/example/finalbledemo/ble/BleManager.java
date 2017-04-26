@@ -42,7 +42,7 @@ public class BleManager {
 
     private static final String TAG = BluetoothLe.class.getName();
     private static final int DEFAULT_COUNT = 3;
-    private static final int DEFAULT_TIMEOUT = 3000;
+    private static final int DEFAULT_TIMEOUT = 600;
 
     private boolean isScanning;
     private boolean mRetryConnectEnable = false;
@@ -385,7 +385,11 @@ public class BleManager {
         return false;
     }
 
-    public void close() {
+    void setGattNull(){
+        gatt = null;
+    }
+
+    void close() {
         if (gatt != null) {
             cancelReadRssiTimerTask();
             Log.i(TAG, "gatt不为空，执行关闭置空gatt");
@@ -462,6 +466,14 @@ public class BleManager {
         } else {
             Log.i(TAG, "please make sure the bluetooth device is connected");
         }
+    }
+
+    boolean scanning() {
+        return isScanning;
+    }
+
+    boolean getConnected() {
+        return isConnected;
     }
 
 }

@@ -8,8 +8,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import com.example.finalbledemo.ble.BluetoothLe;
+import com.example.finalbledemo.ble.OnConnectListener;
+import com.example.finalbledemo.ble.OnElectricityRequestListener;
 import com.example.finalbledemo.ble.OnKeyListener;
 import com.example.finalbledemo.ble.OnLeNotificationListener;
 import com.example.finalbledemo.ble.OnReadRssiListener;
@@ -40,6 +43,7 @@ public class Test2Activity extends AppCompatActivity {
             @Override
             public void onHistroyInfoReadCompleted(String info) {
                 Log.i(TAG, "在Test2Activity中接收到的历史笔迹信息" + info);
+                BluetoothLe.getDefault().sendBleInstruct(BluetoothLe.OPEN_WRITE_CHANNEL);
             }
 
             @Override
@@ -58,25 +62,44 @@ public class Test2Activity extends AppCompatActivity {
                 Log.i(TAG, "历史数据删除完毕,打开书写通道");
                 BluetoothLe.getDefault().sendBleInstruct(BluetoothLe.OPEN_WRITE_CHANNEL);
             }
-
-            @Override
-            public void onElectricityDetected(int electricity) {
-                Log.i(TAG, "检测到电量" + electricity);
-            }
         });
 
         BluetoothLe.getDefault().setOnKeyListener(new OnKeyListener() {
             @Override
             public void onSuccess(String key) {
                 SharedPreUtils.setString(Test2Activity.this, BluCommonUtils.SAVE_WRITE_PEN_KEY, key);
+                Log.i(TAG, "key生成成功 保存到本地---"+key);
             }
             @Override
             public void onGetKeyEmpty() {
                 String cacheKeyMessage = SharedPreUtils.getString(Test2Activity.this, BluCommonUtils.SAVE_WRITE_PEN_KEY);
                 BluetoothLe.getDefault().setKey(cacheKeyMessage);
+                Log.i(TAG, "key从本地取出 设置进去---"+cacheKeyMessage);
+            }
+        });
+
+        BluetoothLe.getDefault().setOnConnectListener(new OnConnectListener() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(Test2Activity.this,"1111111111连接成功",Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "1111111111连接成功");
+            }
+
+            @Override
+            public void onFailed() {
+                Toast.makeText(Test2Activity.this,"1111111111连接断开",Toast.LENGTH_SHORT).show();
+                Log.i(TAG, "1111111111连接断开");
+            }
+        });
+
+        BluetoothLe.getDefault().setOnElectricityRequestListener(new OnElectricityRequestListener() {
+            @Override
+            public void onElectricityDetected(String electricity) {
+                Log.i(TAG, "电量信息"+electricity);
             }
         });
     }
+
 
     public void showDialog() {
         new AlertDialog.Builder(this)
@@ -106,10 +129,14 @@ public class Test2Activity extends AppCompatActivity {
     }
 
     public void connect(View view) {
-
-        BluetoothLe.getDefault()
+        if (BluetoothLe.getDefault().isBluetoothOpen()){
+            BluetoothLe.getDefault().resetRetryConfig();
+            BluetoothLe.getDefault()
 //                .setRetryConnectEnable(false)
-                .connectBleDevice(address, false);
+                    .connectBleDevice(address, false);
+        }else {
+            BluetoothLe.getDefault().openBle();
+        }
     }
 
     public void disconnect(View view) {
@@ -134,8 +161,8 @@ public class Test2Activity extends AppCompatActivity {
         Log.i(TAG, "点击了防丢按钮");
         BluetoothLe.getDefault().enableAntiLost(5000, new OnReadRssiListener() {
             @Override
-            public void onSuccess(int rssi, int cm) {
-                Log.i(TAG, "检测到距离" + cm +"检测到信号强度"+rssi);
+            public void onSuccess(int rssi) {
+                Log.i(TAG, "检测到信号强度"+rssi);
             }
         });
     }
