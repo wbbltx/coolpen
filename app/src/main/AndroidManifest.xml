@@ -24,7 +24,6 @@
         </activity>
         <activity android:name=".ControllerActivity" />
         <activity android:name=".permission.BaseActivity" />
-        <activity android:name=".MainActivity" />
         <activity android:name=".Test2Activity"></activity>
     </application>
 

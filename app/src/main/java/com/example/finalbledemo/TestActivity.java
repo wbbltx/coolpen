@@ -57,21 +57,21 @@ public class TestActivity extends AppCompatActivity {
     }
 
     public void enableBle(View view) {
-        boolean b = BluetoothLe.getDefault().openBle();
-        Log.i("controll", "" + b);
+        boolean b = BluetoothLe.getDefault().enableBluetooth();
+        Log.i("BluetoothLe", "" + b);
     }
 
     public void closeBle(View view) {
-        BluetoothLe.getDefault().closeBle();
+        BluetoothLe.getDefault().disableBle();
     }
 
     public void scan(View view) {
         Log.i("controll", "点击扫描");
         bleListAdapter.clear();
         BluetoothLe.getDefault()
-                .setScanPeriod(SEET_MILLI_SECOND_TIME)//设置扫描时长，单位毫秒，默认10秒
-                .setScanByServiceUUID(null)
-                .startScan(this, new OnBleScanListener() {
+//                .setScanPeriod(SEET_MILLI_SECOND_TIME)//设置扫描时长，单位毫秒，默认10秒
+//                .setScanByServiceUUID(null)
+                .startScan(new OnBleScanListener() {
                     @Override
                     public void onScanResult(BluetoothDevice bluetoothDevice, int rssi, byte[] scanRecord) {
                         Log.i("controll", bluetoothDevice.getAddress());

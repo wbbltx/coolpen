@@ -22,9 +22,9 @@ import java.util.UUID;
  * @anthor wubinbin
  * @time 2017/4/20 17:50
  */
-public class BluetoothLe {
+public class BluetoothLebackup {
 
-    private static final String TAG = BluetoothLe.class.getName();
+    private static final String TAG = BluetoothLebackup.class.getName();
     private BleManager bleManager;
     private int scanPeriod = 30000;
     private UUID[] serviceUUID = {BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid()};
@@ -67,10 +67,10 @@ public class BluetoothLe {
     private boolean autoConnect = false;
 
     private static class SingletonHolder {
-        private static final BluetoothLe INSTANCE = new BluetoothLe();
+        private static final BluetoothLebackup INSTANCE = new BluetoothLebackup();
     }
 
-    private BluetoothLe() {
+    private BluetoothLebackup() {
     }
 
     /**
@@ -78,7 +78,7 @@ public class BluetoothLe {
      *
      * @return 返回Ble实例
      */
-    public static BluetoothLe getDefault() {
+    public static BluetoothLebackup getDefault() {
         return SingletonHolder.INSTANCE;
     }
 
@@ -96,7 +96,7 @@ public class BluetoothLe {
     /**
      * 开启蓝牙 内部检测是否支持BLE
      */
-    public boolean enableBluetooth() {
+    public boolean enableBle() {
         boolean isOpen = false;
         if (bleManager.isBluetoothSupported() && bleManager.isBleSupported() && !bleManager.isBluetoothOpen()) {
             isOpen = bleManager.enableBluetooth();
@@ -134,7 +134,7 @@ public class BluetoothLe {
      * @param scanPeriod 设置扫描时长 不设置默认为10秒
      * @return
      */
-    public BluetoothLe setScanPeriod(int scanPeriod) {
+    public BluetoothLebackup setScanPeriod(int scanPeriod) {
         this.scanPeriod = scanPeriod;
         return this;
     }
@@ -143,7 +143,7 @@ public class BluetoothLe {
      * @param serviceUUID 设置扫描目标 不进行设置默认只搜索酷神笔 设置为null搜索不进行过滤 也可以根据场景需求设置需要搜索的服务
      * @return
      */
-    public BluetoothLe setScanByServiceUUID(UUID[] serviceUUID) {
+    public BluetoothLebackup setScanByServiceUUID(UUID[] serviceUUID) {
         this.serviceUUID = serviceUUID;
         return this;
     }
@@ -224,19 +224,19 @@ public class BluetoothLe {
     }
 
     //    设置是否允许重连 默认不允许
-    public BluetoothLe setRetryConnectEnable(boolean b) {
+    public BluetoothLebackup setRetryConnectEnable(boolean b) {
         bleManager.setRetryConnectEnable(b);
         return this;
     }
 
     //    设置连接次数 重连状态为FALSE 设置无效 默认一次
-    public BluetoothLe setRetryConnectCount(int i) {
+    public BluetoothLebackup setRetryConnectCount(int i) {
         bleManager.setRetryConnectCount(i);
         return this;
     }
 
     //    设置连接超时 重连状态为FALSE 设置无效 默认5秒
-    public BluetoothLe setConnectTimeOut(int i) {
+    public BluetoothLebackup setConnectTimeOut(int i) {
         bleManager.setConnectTimeOut(i);
         return this;
     }
@@ -273,7 +273,7 @@ public class BluetoothLe {
 //            打开书写通道
             case OPEN_WRITE_CHANNEL:
                 sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_WRITE_CHANNEL.getUuid(), false);
-                Log.i(TAG, "open channel and clear bluetooth cache");
+                Log.i(TAG, "打开书写通道 清除蓝牙缓存");
                 clearDeviceCache();
                 break;
 //            打开存储通道
@@ -334,7 +334,7 @@ public class BluetoothLe {
                             }
                         }
                     });
-                    Log.i(TAG, "disconnected " + status);
+                    Log.i(TAG, "disconnected" + status);
                 }
             }
         }
@@ -342,6 +342,7 @@ public class BluetoothLe {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             super.onServicesDiscovered(gatt, status);
+//            Log.i(TAG, "有没有发现服务?");
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 bleManager.setIsServiceDiscovered(true);
                 Log.i(TAG, "onServicesDiscovered received: go enable notification");
@@ -452,10 +453,8 @@ public class BluetoothLe {
                             mHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-//                                    Log.i(TAG, "为空 发送一个假的 send HAVE_KEY_WRITE again  emptyempty");
-//                                    sendBleInstruct(BluUUIDUtils.BluInstruct.HAVE_KEY_WRITE.getUuid() + "170428121648", false);
                                     if (onConnectListener != null) {
-                                        Log.i(TAG, "local key is empty,pen key is not,lead to disconnect，reset your pen and try again or set local key");
+                                        Log.i(TAG, "local key is empty,pen key is not,lead to disconnect 需要请将蓝牙笔设置为配对状态，再尝试连接");
                                         onConnectListener.onFailed();
                                     }
                                 }
@@ -498,11 +497,11 @@ public class BluetoothLe {
 //                        执行断开连接
                         is_Receive_No_Key_Write_Success_State = true;
                         mHandler.removeCallbacks(runnableNoKeyStateWrite);
-                        Log.i(TAG, "笔内没有保存key信息，写入失败,暂时还不知道什么情况会导致这种失败");
+                        Log.i(TAG, "笔内没有保存key信息，写入失败");
                         disconnectBleDevice();
 
                     } else if (bluMessage.startsWith(BluUUIDUtils.BluInstructReplyMsg.HAVE_KEY_WRITE_SUCCEED_STATE.getMsg())) {
-                        Log.i(TAG, "connected 2 level, send QUERY_STORAGE_INFO and query historical info");
+                        Log.i(TAG, "笔内保存了key信息，写入成功,最终成功 查询有没有存储信息");
                         is_Receive_Have_Key_Write_Success_State = true;
                         mHandler.removeCallbacks(runnableHaveKeyWite);
                         if (bleManager.getScanning()) {
@@ -602,14 +601,9 @@ public class BluetoothLe {
                     }
                 } else {
 //                    不是0f0f开头的 是笔迹信息
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (onLeNotificationListener != null) {
-                                onLeNotificationListener.onWrite(bluMessage);
-                            }
-                        }
-                    });
+                    if (onLeNotificationListener != null) {
+                        onLeNotificationListener.onWrite(bluMessage);
+                    }
                 }
             }
         }
@@ -619,12 +613,7 @@ public class BluetoothLe {
             super.onReadRemoteRssi(gatt, rssi, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i(TAG, "是否被触发？" + status);
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        onReadRssiListener.onSuccess(rssi);
-                    }
-                });
+                onReadRssiListener.onSuccess(rssi);
             }
         }
     };

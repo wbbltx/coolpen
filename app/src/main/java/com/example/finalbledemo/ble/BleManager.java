@@ -1,6 +1,5 @@
 package com.example.finalbledemo.ble;
 
-import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -9,23 +8,15 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.le.BluetoothLeScanner;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Looper;
-import android.support.annotation.RequiresPermission;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.RemoteInput;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -41,21 +32,21 @@ public class BleManager {
     private Context context;
 
     private static final String TAG = BluetoothLe.class.getName();
-    private static final int DEFAULT_COUNT = 3;
-    private static final int DEFAULT_TIMEOUT = 600;
+    private static final int DEFAULT_COUNT = 1;
+    private static final int DEFAULT_TIMEOUT = 800;
 
-    private boolean isScanning;
     private boolean mRetryConnectEnable = false;
-    private boolean isConnected = false;
     private boolean isServiceDiscovered;
+    private boolean isConnected = false;
+    private boolean isScanning;
 
-    private int mRetryConnectCount = DEFAULT_COUNT;
     private int connectTimeoutMillis = DEFAULT_TIMEOUT;
+    private int mRetryConnectCount = DEFAULT_COUNT;
     private int serviceTimeoutMillis;
 
     private BluetoothGatt gatt;
     private BluetoothGattService service;
-    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private Handler mHandler;
     private Timer mTimer;
     private TimerTask mTimerTask;
 
@@ -65,20 +56,19 @@ public class BleManager {
     }
 
     //判断是否支持ble
-    public boolean isBleSupported() {
+    boolean isBleSupported() {
         if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(context, "不支持BLE", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "BLE is not supported. ");
             return false;
         }
         return true;
     }
 
     //判断蓝牙是否开启
-    boolean isBluetoothOpen() {
+    public boolean isBluetoothOpen() {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter.isEnabled()) {
-            Log.e(TAG, "your bluetooth has already been turned on. ");
-//            Toast.makeText(context, "蓝牙已经开启", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "bluetooth is already on. ");
             return true;
         }
         return false;
@@ -88,7 +78,7 @@ public class BleManager {
     boolean isBluetoothSupported() {
         if (null == BluetoothAdapter.getDefaultAdapter()) {
 //            Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
-            Log.i(TAG, "your device does not support bluetooth. ");
+            Log.i(TAG, "bluetooth is not support . ");
             return false;
         }
         return true;
@@ -98,7 +88,7 @@ public class BleManager {
     boolean enableIntentBluetooth(Activity activity) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
-            Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(context, "不支持蓝牙", Toast.LENGTH_SHORT).show();
             Log.e(TAG, "false. your device does not support bluetooth. ");
             return false;
         }
@@ -106,7 +96,7 @@ public class BleManager {
         isBleSupported();
 
         if (bluetoothAdapter.isEnabled()) {
-            Toast.makeText(context, "蓝牙已经开启", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(context, "蓝牙已经开启", Toast.LENGTH_SHORT).show();
             Log.d(TAG, "false. your device has been turn on bluetooth.");
             return false;
         }
@@ -120,11 +110,9 @@ public class BleManager {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         boolean enable = bluetoothAdapter.enable();
         if (enable) {
-//            Toast.makeText(context, "蓝牙开启", Toast.LENGTH_SHORT).show();
             Log.i(TAG, "bluetooth is on. ");
             return enable;
         }
-//        Toast.makeText(context, "蓝牙未开启", Toast.LENGTH_SHORT).show();
         Log.i(TAG, "bluetooth is off. ");
         return false;
     }
@@ -134,21 +122,19 @@ public class BleManager {
         synchronized (BleManager.class) {
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (bluetoothAdapter.isEnabled()) {
-                bluetoothAdapter.disable();
-//                Toast.makeText(context, "蓝牙关闭", Toast.LENGTH_SHORT).show();
+                boolean disable = bluetoothAdapter.disable();
                 Log.i(TAG, "bluetooth is off. ");
-                return true;
+                return disable;
             } else {
-//                Toast.makeText(context, "蓝牙已经关闭", Toast.LENGTH_SHORT).show();
                 Log.i(TAG, "bluetooth has already been turned off. ");
-                return false;
+                return true;
             }
         }
     }
 
     //        BluetoothLeScanner
     //扫描
-    public void scanLeDevice(UUID[] serviceUUID, int scanPeriod, final BluetoothAdapter.LeScanCallback mLeScanCallback) {
+    void scanLeDevice(UUID[] serviceUUID, int scanPeriod, final BluetoothAdapter.LeScanCallback mLeScanCallback) {
         stopScanLeDevice(mLeScanCallback);
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 //        BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
@@ -174,8 +160,9 @@ public class BleManager {
 
 
     //停止扫描  正在扫描时才可以停止扫描
-    public void stopScanLeDevice(BluetoothAdapter.LeScanCallback mLeScanCallback) {
+    void stopScanLeDevice(BluetoothAdapter.LeScanCallback mLeScanCallback) {
         if (isScanning == true) {
+            Log.i(TAG, "stop scanning");
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             bluetoothAdapter.stopLeScan(mLeScanCallback);
             isScanning = false;
@@ -183,7 +170,7 @@ public class BleManager {
     }
 
     void setIsConnected(boolean isConnected) {
-        Log.i(TAG, "接收返回的连接消息-----" + isConnected);
+//        Log.i(TAG, "接收返回的连接消息-----" + isConnected);
         this.isConnected = isConnected;
     }
 
@@ -195,39 +182,38 @@ public class BleManager {
      * @param autoConnect           是否自动连接
      * @param bluetoothGattCallback 回调 如果连接成功，一定要在回调的方法中setIsConnected（true）同理 如果连接断开，则要在回调中设置setIsConnected（false）
      */
-    void connect(Object remote, boolean autoConnect, BluetoothGattCallback bluetoothGattCallback) {
+    void connect(Object remote, boolean autoConnect, BluetoothGattCallback bluetoothGattCallback, OnConnectListener onConnectListener) {
         //     防止重复调用连接方法
         if (isConnected) {
-            Log.i(TAG, "已经连接 直接返回");
+            Log.i(TAG, "已经连接");
             return;
         }
 
-        Log.i(TAG, "连接之前判断 如果gatt不为空，则先close");
+//        Log.i(TAG, "连接之前判断 如果gatt不为空，则先close");
         close();
 //        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothDevice remoteDevice = getBluetoothDevice(remote);
 
-        Log.i(TAG, "开始连接+++");
+        Log.i(TAG, "start connect" + System.currentTimeMillis());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback, TRANSPORT_LE);
         } else {
             gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback);
         }
-//        gatt = remoteDevice.connectGatt(context, autoConnect, bluetoothGattCallback);
-        checkConnected(remote, autoConnect, bluetoothGattCallback);
-//        Log.i(TAG, "正在连接");
+        onConnectListener.isConnecting();
+        Log.i(TAG, "connecting...");
+        checkConnected(remote, autoConnect, bluetoothGattCallback, onConnectListener);
     }
 
     private BluetoothDevice getBluetoothDevice(Object remote) {
         BluetoothDevice remoteDevice;
-        Log.i(TAG, "判断remote参数类型");
         if (remote instanceof String) {
-            Log.i(TAG, "参数是mac地址");
+//            Log.i(TAG, "参数是mac地址");
             remoteDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice((String) remote);
         } else if (remote instanceof BluetoothDevice) {
             remoteDevice = (BluetoothDevice) remote;
-            Log.i(TAG, "参数是蓝牙设备");
+//            Log.i(TAG, "参数是蓝牙设备");
         } else {
             throw new IllegalArgumentException("参数必须为MAC地址或者蓝牙设备");
         }
@@ -240,16 +226,16 @@ public class BleManager {
      *
      * @param bluetoothGattCallback
      */
-    private void checkConnected(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
+    private void checkConnected(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback, final OnConnectListener onConnectListener) {
         Log.i(TAG, mRetryConnectEnable + "------" + mRetryConnectCount + "------" + connectTimeoutMillis);
         if (mRetryConnectEnable && mRetryConnectCount > 0 && connectTimeoutMillis > 0) {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    Log.i(TAG, "决定是否进入重连---" + isConnected);
+//                    Log.i(TAG, "决定是否进入重连---" + isConnected);
                     if (isConnected == false) {
-                        Log.i(TAG, mRetryConnectCount + "---进入重连---" + isConnected + "---" + connectTimeoutMillis + "以后在执行");
-                        connect(address, autoConnect, bluetoothGattCallback);
+//                        Log.i(TAG, mRetryConnectCount + "---进入重连---" + isConnected + "---" + connectTimeoutMillis + "以后在执行");
+                        connect(address, autoConnect, bluetoothGattCallback, onConnectListener);
                         mRetryConnectCount = mRetryConnectCount - 1;
                     }
                 }
@@ -260,12 +246,10 @@ public class BleManager {
     //使能CharacteristicNotification
     boolean enableCharacteristicNotification() {
         service = gatt.getService(BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid());
-//        service = gatt.getService(BluUUIDUtils.BtSmartUuid.UUID_SERVICE.getUuid());
         if (service == null) {
-            Log.i(TAG, "使能通知---service为空");
-            throw new NullPointerException("servicr 不能为空");
+            Log.i(TAG, "service is null");
+            throw new NullPointerException("servicr cannot be null");
         }
-        Log.i(TAG, "通知被使能---service不为空");
         BluetoothGattCharacteristic characteristic = service.getCharacteristic(BluUUIDUtils.BtSmartUuid.UUID_CHAR_READ.getUuid());
         gatt.setCharacteristicNotification(characteristic, true);
 //        List<BluetoothGattDescriptor> descriptors = characteristic.getDescriptors();
@@ -277,6 +261,7 @@ public class BleManager {
             Log.i(TAG, "writeDescriptor(notification), " + CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID);
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             boolean b = gatt.writeDescriptor(descriptor);
+            Log.i(TAG, "notification enabled");
             return b;
         }
         return false;
@@ -287,7 +272,7 @@ public class BleManager {
         if (service != null && gatt != null) {
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUUID);
             characteristic.setValue(bytes);
-//            Log.i(TAG, "正在写characteristic" + characteristic.getUuid());
+            Log.i(TAG, "write characteristic to " + characteristic.getUuid());
             gatt.writeCharacteristic(characteristic);
         }
     }
@@ -297,11 +282,11 @@ public class BleManager {
     private static final UUID PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_UUID = UUID.fromString("00002A04-0000-1000-8000-00805f9b34fb");
 
     //读取characterristics   这个方法暂时没有用
-    public void readCharacteristic() {
+    void readCharacteristic() {
         if (gatt == null) {
             return;
         }
-        Log.i(TAG, "首先获取另外的服务");
+//        Log.i(TAG, "首先获取另外的服务");
         readCharacteristicQueue(SERVICE, PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS_UUID);
     }
 
@@ -316,26 +301,26 @@ public class BleManager {
         if ((properties & BluetoothGattCharacteristic.PROPERTY_READ) == 0)
             return false;
 
-        Log.i(TAG, "读取characteristics是否为真" + gatt.readCharacteristic(preCharacteristic));
+//        Log.i(TAG, "读取characteristics是否为真" + gatt.readCharacteristic(preCharacteristic));
         return gatt.readCharacteristic(preCharacteristic);
     }
 
     //    设置是否允许重连
     void setRetryConnectEnable(boolean retryConnectEnable) {
-        Log.i(TAG, "设置是否允许重连" + retryConnectEnable);
+//        Log.i(TAG, "设置是否允许重连" + retryConnectEnable);
         mRetryConnectEnable = retryConnectEnable;
     }
 
     //    设置连接次数
     void setRetryConnectCount(int count) {
         mRetryConnectCount = count;
-        Log.i(TAG, "设置连接次数" + count);
+//        Log.i(TAG, "设置连接次数" + count);
     }
 
     //    设置连接超时
     void setConnectTimeOut(int millisecond) {
         this.connectTimeoutMillis = millisecond;
-        Log.i(TAG, "设置连接超时" + millisecond);
+//        Log.i(TAG, "设置连接超时" + millisecond);
     }
 
     //    复位重连设置
@@ -350,19 +335,13 @@ public class BleManager {
         this.serviceTimeoutMillis = millisecond;
     }
 
-    /**
-     * 检查服务是否发现 调用该方法并且生效需要设置setRetryConnectEnable为true（默认为false），
-     * setRetryConnectCount大于0（默认为1），
-     * setConnectTimeOut大于0（默认10000）
-     * 同时必须要在onServicesDiscovered回调中根据返回的状态设置setIsServiceDiscovered
-     */
-    public void checkServiceDiscover(final Context context, final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
+    void checkServiceDiscover(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback, final OnConnectListener onConnectListener) {
         if (mRetryConnectEnable && mRetryConnectCount > 0 && serviceTimeoutMillis > 0) {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if (!isServiceDiscovered) {
-                        connect(address, autoConnect, bluetoothGattCallback);
+                        connect(address, autoConnect, bluetoothGattCallback, onConnectListener);
                         mRetryConnectCount -= 1;
                     }
                 }
@@ -373,7 +352,7 @@ public class BleManager {
     /**
      *
      */
-    public boolean discoverService(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
+    boolean discoverService(final Object address, final boolean autoConnect, final BluetoothGattCallback bluetoothGattCallback) {
         if (gatt == null) {
             return false;
         }
@@ -385,14 +364,10 @@ public class BleManager {
         return false;
     }
 
-    void setGattNull(){
-        gatt = null;
-    }
-
     void close() {
         if (gatt != null) {
             cancelReadRssiTimerTask();
-            Log.i(TAG, "gatt不为空，执行关闭置空gatt");
+//            Log.i(TAG, "gatt不为空，执行关闭置空gatt");
             isConnected = false;
             isServiceDiscovered = false;
             gatt.close();
@@ -401,7 +376,7 @@ public class BleManager {
         }
     }
 
-    public void disconnect() {
+    void disconnect() {
         if (isConnected && gatt != null) {
             cancelReadRssiTimerTask();
             isConnected = false;
@@ -468,7 +443,7 @@ public class BleManager {
         }
     }
 
-    boolean scanning() {
+    boolean getScanning() {
         return isScanning;
     }
 

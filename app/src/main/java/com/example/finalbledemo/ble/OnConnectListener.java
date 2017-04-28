@@ -6,7 +6,11 @@ package com.example.finalbledemo.ble;
 
 public abstract class OnConnectListener extends LeListener {
 
-    public abstract void onSuccess();
+    public abstract void onConnected();
+
+    public abstract void onDisconnected();
 
     public abstract void onFailed();
+
+    public abstract void isConnecting();
 }

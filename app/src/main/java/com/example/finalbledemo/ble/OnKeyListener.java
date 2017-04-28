@@ -11,7 +11,7 @@ public abstract class OnKeyListener extends LeListener {
      * 保存生成的key
      * @param key
      */
-    public abstract void onSuccess(String key);
+    public abstract void onKeyGenerated(String key);
 
-    public abstract void onGetKeyEmpty();
+    public abstract void onSetLocalKey();
 }

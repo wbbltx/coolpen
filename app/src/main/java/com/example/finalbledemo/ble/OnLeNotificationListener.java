@@ -17,7 +17,7 @@ public abstract class OnLeNotificationListener extends LeListener {
      * 历史笔迹信息
      * @param info
      */
-    public abstract void onHistroyInfoReadCompleted(String info);
+    public abstract void onReadHistroyInfo(String info);
 
     /**
      * 检测到有历史信息
