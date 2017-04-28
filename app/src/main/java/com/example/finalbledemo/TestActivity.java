@@ -24,7 +24,6 @@ import java.util.List;
 
 public class TestActivity extends AppCompatActivity {
 
-    private static final int SEET_MILLI_SECOND_TIME = 5000;
     private ListView listView;
     private BleListAdapter bleListAdapter;
 
