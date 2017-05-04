@@ -33,6 +33,7 @@ public class BluetoothLe {
     private boolean is_Receive_No_Key_Write_Success_State;
     private boolean is_Receive_Have_Key_Write_Success_State;
     private boolean is_Receive_Key_State;
+    private boolean isHistoricalData;
 
     private OnReadRssiListener onReadRssiListener;
     private OnLeNotificationListener onLeNotificationListener;
@@ -64,6 +65,7 @@ public class BluetoothLe {
     private Runnable runnableObtainKeyState;
     private Runnable runnableNoKeyStateWrite;
     private Runnable runnableHaveKeyWite;
+    private OnCharacterReadListener onCharacterReadListener;
     private boolean autoConnect = false;
 
     private static class SingletonHolder {
@@ -270,9 +272,10 @@ public class BluetoothLe {
 
     public void sendBleInstruct(int flag) {
         switch (flag) {
-//            打开书写通道
+//            打开书写通道 此时读取到的是即时数据
             case OPEN_WRITE_CHANNEL:
                 sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_WRITE_CHANNEL.getUuid(), false);
+                isHistoricalData = false;
                 Log.i(TAG, "open channel and clear bluetooth cache");
                 clearDeviceCache();
                 break;
@@ -280,9 +283,10 @@ public class BluetoothLe {
             case OPEN_STORAGE_CHANNEL:
                 sendBleInstruct(BluUUIDUtils.BluInstruct.OPEN_STORAGE_CHANNEL.getUuid(), false);
                 break;
-//            读取通道信息
+//            读取通道信息 此时读取到的是历史数据
             case READ_STORAGE_INFO:
                 sendBleInstruct(BluUUIDUtils.BluInstruct.READ_STORAGE_INFO.getUuid(), false);
+                isHistoricalData = true;
                 break;
 //            清空通道信息
             case EMPTY_STORAGE_DATA:
@@ -560,7 +564,7 @@ public class BluetoothLe {
                             @Override
                             public void run() {
                                 if (onLeNotificationListener != null) {
-                                    onLeNotificationListener.onReadHistroyInfo(bluMessage);
+                                    onLeNotificationListener.onReadHistroyInfo();
                                 }
                             }
                         });
@@ -605,8 +609,12 @@ public class BluetoothLe {
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (onLeNotificationListener != null) {
-                                onLeNotificationListener.onWrite(bluMessage);
+                            if (onCharacterReadListener != null) {
+                            if (isHistoricalData){
+                                    onCharacterReadListener.onReadHistoricalData(bluMessage);
+                            }else {
+                                    onCharacterReadListener.onReadInstantData(bluMessage);
+                                }
                             }
                         }
                     });
@@ -661,6 +669,10 @@ public class BluetoothLe {
 
     public void setOnKeyListener(OnKeyListener onKeyListener) {
         this.onKeyListener = onKeyListener;
+    }
+
+    public void setOnCharacterReadListener(OnCharacterReadListener onCharacterReadListener){
+        this.onCharacterReadListener = onCharacterReadListener;
     }
 
     public void setKey(String key) {

@@ -13,6 +13,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.finalbledemo.ble.BluetoothLe;
+import com.example.finalbledemo.ble.OnCharacterReadListener;
 import com.example.finalbledemo.ble.OnConnectListener;
 import com.example.finalbledemo.ble.OnElectricityRequestListener;
 import com.example.finalbledemo.ble.OnKeyListener;
@@ -39,20 +40,27 @@ public class Test2Activity extends AppCompatActivity {
         address = intent.getStringExtra("address");
         name = intent.getStringExtra("name");
 
+        BluetoothLe.getDefault().setOnCharacterReadListener(new OnCharacterReadListener() {
+            @Override
+            public void onReadHistoricalData(String historicalInfo) {
+                textview.setText("收到的历史笔迹信息" + historicalInfo);
+                Log.i(TAG, "收到的历史笔迹信息" + historicalInfo);
+            }
+
+            @Override
+            public void onReadInstantData(String instantInfo) {
+                textview.setText("收到的即时笔迹信息" + instantInfo);
+                Log.i(TAG, "收到的即时笔迹信息" + instantInfo);
+            }
+        });
         /**
          * 设置通知的监听
          */
         BluetoothLe.getDefault().setOnLeNotificationListener(new OnLeNotificationListener() {
             @Override
-            public void onWrite(String info) {
-                textview.setText("在到的笔迹信息" + info);
-                Log.i(TAG, "在到的笔迹信息" + info);
-            }
-
-            @Override
-            public void onReadHistroyInfo(String info) {
-                textview.setText("接收到的历史笔迹信息"+info);
-                Log.i(TAG, "在Test2Activity中接收到的历史笔迹信息" + info);
+            public void onReadHistroyInfo() {
+                textview.setText("接收到的历史笔迹信息");
+                Log.i(TAG, "在Test2Activity中接收到的历史笔迹信息");
 //                存储数据读取完毕，开启书写通道
                 BluetoothLe.getDefault().sendBleInstruct(BluetoothLe.OPEN_WRITE_CHANNEL);
             }

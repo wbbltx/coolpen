@@ -8,16 +8,9 @@ package com.example.finalbledemo.ble;
 public abstract class OnLeNotificationListener extends LeListener {
 
     /**
-     * 笔迹信息
-     * @param info
-     */
-    public abstract void onWrite(String info);
-
-    /**
      * 历史笔迹信息
-     * @param info
      */
-    public abstract void onReadHistroyInfo(String info);
+    public abstract void onReadHistroyInfo();
 
     /**
      * 检测到有历史信息

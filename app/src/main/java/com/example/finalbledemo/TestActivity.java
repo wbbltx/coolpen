@@ -125,10 +125,10 @@ public class TestActivity extends AppCompatActivity {
         }
     }
 
-    public void connect(View view) {
-        Intent intent = new Intent(TestActivity.this,Test2Activity.class);
-        intent.putExtra("address","07:01:03:D1:00:C4");
-        intent.putExtra("name","07:01:03:D1:00:C4");
-        startActivity(intent);
-    }
+//    public void connect(View view) {
+//        Intent intent = new Intent(TestActivity.this,Test2Activity.class);
+//        intent.putExtra("address","07:01:03:D1:00:C4");
+//        intent.putExtra("name","07:01:03:D1:00:C4");
+//        startActivity(intent);
+//    }
 }
